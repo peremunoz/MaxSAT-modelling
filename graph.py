@@ -99,7 +99,19 @@ class Graph(object):
         :param solver: An instance of MaxSATRunner.
         :return: A solution (list of nodes).
         """
-        raise NotImplementedError("Your Code Here")
+        formula = wcnf.WCNFFormula()
+        # Create one boolean variable for each vertex
+        nodes = [formula.new_var() for _ in range(self.n_nodes)]
+        # Add soft clauses to the formula
+        for n in nodes:
+            formula.add_clause([-n], weight=1)
+        # Add hard clauses to the formula
+        for n1, n2 in self.edges:
+            formula.add_clause([nodes[n1 - 1], nodes[n2 - 1]])
+        # Solve the formula
+        _, model = solver.solve(formula)
+        # Return the solution
+        return [n for n in model if n > 0]
 
     def max_clique(self, solver):
         """Computes the maximum clique of the graph.
