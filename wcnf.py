@@ -111,7 +111,7 @@ class WCNFFormula(object):
 
         :param formula13: The 1,3-WPM formula to add the clauses to.
         :type formula13: WCNFFormula
-        :param clause_list: The list of clauses to convert.
+        :param clause_list: The list of hard clauses to convert.
         :type clause_list: list[list[int]]
         """
         for clause in clause_list:
