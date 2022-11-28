@@ -9,7 +9,6 @@ import io
 import itertools
 import sys
 
-
 TOP_WEIGHT = 0
 
 
@@ -87,9 +86,51 @@ class WCNFFormula(object):
     def to_13wpm(self):
         """Generates a new formula that is the 1,3-WPM equivalent
         of this one."""
+        if self.is_13wpm():
+            return self
+        # Create a new formula with the same number of variables
         formula13 = WCNFFormula()
-        raise NotImplementedError("Your code here")
+        formula13.num_vars = self.num_vars
+
+        # Convert soft clauses to 1,3-WPM
+        for weight, clause in self.soft:
+            # Create a new variable for each clause and add it as a soft clause
+            new_var = formula13.new_var()
+            formula13.add_clause([-new_var], weight)
+            # Create the hard clause with the new variable and add it as a hard clause
+            new_hard = [[new_var] + clause]
+            formula13.to_13wpm_hard(formula13, new_hard)
+
+        # Convert hard clauses to 1,3-WPM
+        formula13.to_13wpm_hard(formula13, self.hard)
+
         return formula13
+
+    def to_13wpm_hard(self, formula13, clause_list):
+        """Converts a list of standard hard clauses to 1,3-WPM hard clauses.
+
+        :param formula13: The 1,3-WPM formula to add the clauses to.
+        :type formula13: WCNFFormula
+        :param clause_list: The list of clauses to convert.
+        :type clause_list: list[list[int]]
+        """
+        for clause in clause_list:
+            if len(clause) == 3:
+                formula13.add_clause(clause, TOP_WEIGHT)
+
+            elif len(clause) < 3:
+                extended_clause = clause + clause[:3 - len(clause)]
+                formula13.add_clause(extended_clause, TOP_WEIGHT)
+
+            else:  # len(clause) > 3
+                # Create a new variable for dividing the hard clause in subclauses
+                new_var = formula13.new_var()
+                # Create the first sub-clause
+                sub_clause = clause[:2] + [new_var]
+                formula13.add_clause(sub_clause, TOP_WEIGHT)
+
+                # Create the n sub-clauses remaining
+                self.to_13wpm_hard(formula13, [[-new_var] + clause[2:]])
 
     def sum_soft_weights(self):
         return self._sum_soft_weights
