@@ -128,11 +128,7 @@ class Graph(object):
         # Add hard clauses to the formula
         for n1 in nodes:
             for n2 in nodes:
-                if n1 == n2:
-                    continue
-                possibleTuple = (n1, n2)
-                possibleTupleReversed = (n2, n1)
-                if possibleTuple not in self.edges and possibleTupleReversed not in self.edges:
+                if (n1, n2) not in self.edges and (n2, n1) not in self.edges and n1 < n2:
                     formula.add_clause([-nodes[n1 - 1], -nodes[n2 - 1]])
         # Solve the formula
         _, model = solver.solve(formula)
