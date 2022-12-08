@@ -1,0 +1,204 @@
+%! Author = peremunoz
+%! Date = 23/11/2022
+
+% Preamble
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[breaklinks=true]{hyperref}
+\usepackage[a4paper]{geometry}
+\usepackage{listings, lstautogobble}
+\usepackage{verbatim}
+\usepackage{amstex}
+
+\lstset{language=Python, frame=single, autogobble=true}
+
+% Document
+\begin{document}
+    \begin{titlepage}
+        \centering
+        {\includegraphics[width=0.3\textwidth]{logoudl}\par}
+        \vspace{1cm}
+        {\bfseries\LARGE University of Lleida \par}
+        \vspace{3cm}
+        {\scshape\Large Practice 2 \par}
+        \vspace{1cm}
+        {\scshape\Huge MaxSAT \par}
+        \vspace{1cm}
+        {\itshape\Large Artificial Intelligence \par}
+        \vspace{5cm}
+        {\Large Pere Muñoz Figuerol \par}
+        \vfill
+        {\Large December 2022 \par}
+    \end{titlepage}
+    \newpage
+
+    \tableofcontents
+
+
+    \newpage
+
+    \section{Introduction}
+    \label{sec:intro}
+        In this practice we will work with a MaxSAT solver, with the objective of understanding how it works and how to use it.\\
+        First we will model some graph problems in MaxSAT, like the \textit{Minimum Vertex Cover}, the \textit{Maximum Clique} and the \textit{Max-Cut} problems.\\
+        Secondly, we will implement the transformation of a \textit{MaxSAT} formula to a (1,3) \textit{Weighted Partial MaxSAT} formula.\\
+        Finally, we will model the \textit{Combinatorial Actions} problem in MaxSAT, and we will solve it translating it to a (1,3) \textit{Weighted Partial MaxSAT} formula.
+
+    \section{Graph Problems}
+    \label{sec:graph}
+        In this section we will see the modeling of the \textit{MaxSAT} graph problems seen at the Introduction.\\
+        First we will model the \textit{Minimum Vertex Cover} problem.\\
+        Then we will model the \textit{Maximum Clique} problem.\\
+        And finally we will model the \textit{Max-Cut} problem.
+
+    \subsection{Minimum Vertex Cover}
+    \label{subsec:minvc}
+        The \textit{Minimum Vertex Cover} problem is a graph problem that consists in finding the minimum subset of vertices of a graph such that each edge of the graph is incident to at least one vertex of the subset.\\
+        It is NP-complete, so we will model it in \textit{MaxSAT}, concretely in \textit{Weighted Partial MaxSAT} because we have soft and hard clauses with weights.\\
+        First we initialize a new formula, and we add one variable to it for each vertex of the graph.\\
+        Then we create a soft clause for every node of the graph, with weight 1.
+        The variable representing each vertex will be negated in the clause.
+        \begin{lstlisting}[label={lst:lstlisting}]
+            for n in nodes:
+                formula.add_clause([-n], weight=1)
+        \end{lstlisting}
+        After that, we create a hard clause for every edge of the graph.
+        \begin{lstlisting}[label={lst:lstlisting2}]
+            for n1, n2 in edges:
+                formula.add_clause([nodes[n1 - 1], nodes[n2 - 1]])
+        \end{lstlisting}
+        Finally, we solve the formula and we print the solution.\\
+
+        \subsection{Maximum Clique}
+        \label{subsec:maxclique}
+            The \textit{Maximum Clique} problem is a graph problem that consists in finding the maximum subset of vertices of a graph such that each pair of vertices of the subset is connected by an edge.\\
+            It is NP-complete, so we will model it in \textit{MaxSAT}, concretely in \textit{Weighted Partial MaxSAT} because we have soft and hard clauses with weights.\\
+            Same as the previous problem, we initialize a new formula, and we add one variable to it for each vertex of the graph.\\
+            Then we create a soft clause for every node of the graph, with weight 1.
+            This time the variable representing each vertex will not be negated in the clause.
+            \begin{lstlisting}[label={lst:lstlisting3}]
+                for n in nodes:
+                    formula.add_clause([n], weight=1)
+            \end{lstlisting}
+            After that, we create a hard clause for every edge that doesn't exist in the graph.
+            The variables representing the vertices of the non-existent edge will be negated in the clause.
+            \begin{lstlisting}[label={lst:lstlisting4}]
+                for n1 in nodes:
+                    for n2 in nodes:
+                        if (n1, n2) not in self.edges and
+                        (n2, n1) not in self.edges and n1 < n2:
+                            formula.add_clause([-nodes[n1-1], -nodes[n2-1]])
+            \end{lstlisting}
+            As an appreciation, we can see that we are only adding the clause if the first node is smaller than the second one.
+            This is for avoiding adding the same clause twice, because the graph is undirected.\\
+            Finally, we solve the formula and we print the solution.\\
+
+        \subsection{Max-Cut}
+        \label{subsec:maxcut}
+            The \textit{Max-Cut} problem is a graph problem that consists in finding a partition of the vertices of a graph into two disjoint subsets such that the number of edges between the two subsets is maximized.\\
+            It is NP-complete, so we will model it in \textit{MaxSAT}, concretely in \textit{Weighted Partial MaxSAT} because we have soft and hard clauses with weights.\\
+            Same as the previous problem, we initialize a new formula, and we add one variable to it for each vertex of the graph.\\
+            Then we create two soft clauses for every edge of the graph, with weight 1.
+            \begin{lstlisting}[label={lst:lstlisting5}]
+                for n1, n2 in self.edges:
+                    formula.add_clause([nodes[n1-1], nodes[n2-1]], weight=1)
+                    formula.add_clause([-nodes[n1-1], -nodes[n2-1]], weight=1)
+            \end{lstlisting}
+            As in this problem we only have soft clauses, at this point we can solve the formula and print the solution.\\
+
+    \section{Transformation to (1,3) Weighted Partial MaxSAT}
+    \label{sec:transformation}
+        In this section we will see the transformation of a \textit{MaxSAT} formula to a (1,3) \textit{Weighted Partial MaxSAT} formula.\\
+        The method that we are going to implement is the \verb|to_13wpm()| function, that receives a \textit{WCNF} formula and returns the equivalent (1,3) \textit{Weighted Partial MaxSAT} formula.\\
+        First we initialize a new formula, and we add one variable to it for each variable of the original formula, because these are the minimum variables that our new formula will have.\\
+    \subsection{Transformation of soft clauses}
+    \label{subsec:softclauses}
+        For the soft clauses transformation, we will create an additional variable for each soft clause of the original formula.
+        This variable will help us to represent the literals of the original clause.
+        Then, we will add a soft clause, composed with the additional variable negated and with the same weight of the original formula.\\
+        After that, we will call the \verb|to_13wpm_hard()| function, that converts the hard clause to a \textit{CNF-3} formula (explained in the next section), with a clause composed with the addicional variable and the literals of the original soft clause.\\
+        \begin{lstlisting}[label={lst:lstlisting6}]
+            for clause, weight in self.soft_clauses:
+                new_hard = [[new_var] + clause]
+                formula13.to_13wpm_hard(formula13, new_hard)
+        \end{lstlisting}
+
+    \subsection{Transformation of hard clauses}
+    \label{subsec:hardclauses}
+        For the hard clauses transformation, we will check if the clause is a 3-CNF clause.
+        If it is, so it has 3 literals, we will add it to the new formula directly.
+        If it is not, so it has less or more than 3 literals, we will transform it to a 3-CNF clause, and then we will add it to the new formula.\\
+
+        For this transformation, I have implemented an auxiliary function called \verb|to_13wpm_hard()|, that receives a \textit{WCNF} formula and a list of clauses, and it adds the \textit{CNF-3} hard clauses equivalent to the formula.\\
+
+        The first step of the transformation is to check if the clause is a 3-CNF clause.
+        If it is, so it has 3 literals, we will add it to the new formula directly.\\
+        \begin{lstlisting}[label={lst:lstlisting7}]
+            if len(clause) == 3:
+                formula13.add_clause(clause, TOP_WEIGHT)
+        \end{lstlisting}
+
+        If it is less than 3 literals, we have to duplicate the literals of the clause until it has 3 literals.
+        \begin{lstlisting}[label={lst:lstlisting8}]
+            elif len(clause) < 3:
+                extended_clause = clause + clause[:3 - len(clause)]
+                formula13.add_clause(extended_clause, TOP_WEIGHT)
+        \end{lstlisting}
+
+        If it is more than 3 literals, we have to transform it to a 3-CNF clause concatenating the literals of the clause in groups of 3, using some auxiliary variables.
+        \begin{lstlisting}[label={lst:lstlisting9}]
+            else:
+                new_var = formula13.new_var()
+                sub_clause = clause[:2] + [new_var]
+                formula13.add_clause(sub_clause, TOP_WEIGHT)
+        \end{lstlisting}
+            Then, we will call the function recursively with the auxiliary variable negated and the rest of the literals of the clause.
+            \begin{lstlisting}[label={lst:lstlisting10}]
+                formula13.to_13wpm_hard(formula13, [[-new_var] + clause[2:]])
+            \end{lstlisting}
+
+    \section{\textit{Combinatorial Auctions} modelling as \textit{Weighted Partial MaxSAT}}
+    \label{sec:combinatorialauctions}
+        In this section we will see the modelling of the \textit{Combinatorial Auctions} problem as a \textit{Weighted Partial MaxSAT} formula.\\
+        First of all, I have implemented a class called \verb|CombinatorialAuction|, that represents a \textit{Combinatorial Auction} problem.\\
+        This class has as attributes all the agents and goods declared in the input file and a dictionary of bids of type \verb|Bid|.\\
+        This class \verb|Bid| has as attributes the agent that makes the bid, the goods that the agent wants to buy and the price that the agent is willing to pay.\\
+        With this structure defined, we can start modelling the problem.\\
+        The most important method of the \verb|Combinatorial Auction| class is the \verb|solve()|, which solves the problem and prints the solution.\\
+        This method will call the \verb|toWPMS()| function, that transforms the \textit{Combinatorial Auction} problem to a \textit{Weighted Partial MaxSAT} formula.\\
+        Then, it will call the \verb|checkSolution()| function, that checks if the solution is valid.\\
+        All the modelling is done in the \verb|toWPMS()| function, and I have followed the steps that we saw in class.\\
+        As I have to redact a short report, I will not explain all the steps of the modelling, but I will explain why I decided to store the bids in a dictionary and the
+        \verb|is_compatible()| function of the \verb|Bid| class.\\
+
+    \subsection{Storing the bids}
+    \label{subsec:storingbids}
+        The first decision of the modelling that I will explain is the reason of the storage of the bids in a dictionary.
+        The key of the dictionary will be the \textit{MaxSAT} variable assigned to the clause representing that specific bid, and the value will be an object of type \verb|Bid|.
+        This way, we can easily interpret the solution of the \textit{Weighted Partial MaxSAT} formula, and translating it to our specific problem.\\
+
+    \subsection{Checking if a bid is compatible with another}
+    \label{subsec:compatiblebids}
+        The second decision that I will explain is how I check if a bid is compatible with another.
+        This is done in the \verb|is_compatible()| function of the \verb|Bid| class.
+        This function receives a bid, specified the \textit{Other} bid, and it checks if the \textit{Other} bid is compatible with the current bid.
+        Concretely, we have to check that the goods of the \textit{Other} bid and the current bid are different.\\
+        For doing so, first we store the goods of the bids in two different sets.
+        Then, we check if the intersection of the sets is empty using the \verb|isdisjoint()| function of the \verb|set| class, and we return the result.\\
+        \begin{lstlisting}[label={lst:lstlisting11}]
+            def is_compatible(self, other):
+                self_goods = set(self.goods)
+                other_goods = set(other.goods)
+                return self_goods.isdisjoint(other_goods)
+        \end{lstlisting}
+        I think that doing it this way is more efficient than checking it with other methods like \verb|intersection()|, because the \verb|isdisjoint()| function stops its runtime when finding a match in the two sets, and the \verb|intersection()| function creates a new set with the intersection so it has to compute all the two sets.\\
+
+    \section{Conclusions}
+    \label{sec:conclusions}
+        This practice has been very interesting, because I have learned a lot about \textit{Weighted Partial MaxSAT}, a topic that was unknown for me, how to model some graph and real-life problems as this notation in Python.\\
+
+
+\end{document}
